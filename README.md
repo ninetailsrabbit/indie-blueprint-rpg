@@ -18,20 +18,36 @@
 
 - [Installation 📦](#installation-)
 - [Probability](#probability)
-	- [Dice roller 🎲](#dice-roller-)
-	- [Loot 💰](#loot-)
-		- [Creating a new loot table.](#creating-a-new-loot-table)
-			- [LootTableData](#loottabledata)
-			- [LootItem](#lootitem)
-			- [LootItemWeight](#lootitemweight)
-			- [LootItemRarity](#lootitemrarity)
-			- [LootItemChance](#lootitemchance)
-		- [Adding items to a LootieTable](#adding-items-to-a-lootietable)
-		- [Generating loot 🎲](#generating-loot-)
-			- [Using Weight mode](#using-weight-mode)
-			- [Using RollTier mode](#using-rolltier-mode)
-			- [Using PercentageChance](#using-percentagechance)
-			- [Using Combined](#using-combined)
+  - [Dice roller 🎲](#dice-roller-)
+  - [Loot 💰](#loot-)
+    - [Creating a new loot table.](#creating-a-new-loot-table)
+      - [LootTableData](#loottabledata)
+      - [LootItem](#lootitem)
+      - [LootItemWeight](#lootitemweight)
+      - [LootItemRarity](#lootitemrarity)
+      - [LootItemChance](#lootitemchance)
+    - [Adding items to a LootieTable](#adding-items-to-a-lootietable)
+    - [Generating loot 🎲](#generating-loot-)
+      - [Using Weight mode](#using-weight-mode)
+      - [Using RollTier mode](#using-rolltier-mode)
+      - [Using PercentageChance](#using-percentagechance)
+      - [Using Combined](#using-combined)
+- [Entities](#entities)
+  - [Health 💚](#health-)
+  - [Stats ⚔️](#stats-️)
+    - [Character meta](#character-meta)
+      - [Elemental resistances](#elemental-resistances)
+      - [Negative status effects](#negative-status-effects)
+- [Turns 🧠](#turns-)
+  - [Available nodes](#available-nodes)
+  - [Creating a new turn session](#creating-a-new-turn-session)
+    - [Serial (classic turn mode)](#serial-classic-turn-mode)
+  - [Handling turns](#handling-turns)
+    - [Skip](#skip)
+    - [Block](#block)
+    - [Socket methods](#socket-methods)
+  - [Turnity manager Signals](#turnity-manager-signals)
+  - [Turnity socket Signals](#turnity-socket-signals)
 
 # Installation 📦
 
@@ -330,3 +346,420 @@ Any method with the `Combined` suffix will apply the same algorithms explained a
 So for example if `WeightRollTierCombined` is selected, the item must overcome a `weight` and a `roll tier` roll to appear in the loot.
 
 **Note that items that are valid for these combined methods must have the related resources created in the `LootItem`**
+
+# Entities
+
+## Health 💚
+
+Effortlessly simulate health and damage for entities within your video game.
+
+This component handles all aspects related to taking damage and managing health on the parent node. While typically added to a `CharacterBody2D`, there are no limitations preventing its use with a `StaticRigidBody2D`, allowing you to imbue life into objects like trees or other in-game elements
+
+**How to use**
+Incorporate this component as a child node in the location where you intend to implement life and damage mechanics. Simply define the initial values you wish to assign to this component.
+
+**Exported values:**
+
+- `max_health`
+- `health_overflow_percentage`
+- `current_health`
+- `health_regen_per_second`
+- `is_invulnerable` _(The invulnerability flag, when is true no damage is received but can be healed)_
+- `invulnerability_time`
+
+The `max_health_overflow` is a calculated variable that represents the sum of the maximum health and the applied health overflow percentage.
+
+**Example:** `max_health` of 120 and health overflow percentage of 15% = `138`
+
+---
+
+**Ready**
+
+When this component becomes ready in the scene tree, a series of steps are carried out:
+
+- Ensure that the current health does not exceed the maximum health.
+- Establish the health regeneration timer.
+- Set up the invulnerability timer.
+- If the health regeneration per second exceeds zero, activate health regeneration.
+- Establish a connection to its own health_changed signal. Whenever the health changes, this signal is triggered. If health regeneration is enabled, it is also triggered, and if the current health reaches zero, a died signal is emitted.
+- Establish a connection to its own died signal. Once this signal is emitted, the built-in timers within the component are halted.
+- ***
+
+  **Taking damage**
+  To subtract a specific amount of health, you can effortlessly invoke the `damage()` function within the component.
+
+This triggers the emission of a `health_changed` signal each time damage is inflicted. Moreover, the component constantly monitors if the current health has plummeted to zero, subsequently triggering a died signal.
+
+It's worth noting that the component is autonomously connected to its own died signal, concurrently ceasing the `health_regen_timer` and `invulnerability_timer`. If the is_invulnerable variable is set to true, any incoming damage, regardless of its magnitude, will be disregarded. Nevertheless, the standard signal broadcasting will persist as expected..
+
+```swift
+health_component.damage(10)
+health_component.damage(99)
+
+# Parameter is treated as absolute value
+health_component.damage(-50) # translate to 50 inside the function
+```
+
+**Healing**
+
+The functionality mirrors that of the damage function, but in this instance, health is added to the component. It's important to note that the healing process can never surpass the predetermined `max_health_overflow`. Following each execution of the health function, a health_changed signal is emitted.
+
+```swift
+health_component.health(25)
+
+# Parameter is treated as absolute value
+health_component.health(-50) # 50
+```
+
+**Health regeneration per second**
+
+By default, health regeneration occurs every second. When the health component invokes the `damage()` function, regeneration is activated until the maximum health is reached, at which point it deactivates.
+
+You have the flexibility to dynamically adjust the rate of regeneration per second using the `enable_health_regen` function. Alternatively, you can set it to zero to disable health regeneration altogether:
+
+```swift
+health_component.enable_health_regen(10)
+# or disable it
+health_component.enable_health_regen(0)
+```
+
+**Invulnerability**
+
+You have the ability to toggle invulnerability on or off through the enable*invulnerability function. By providing the enable parameter *(a boolean)_, you can specify whether invulnerability is activated or not. Additionally, you can set a time duration _(in seconds)\_ during which the entity will be invulnerable. Once the specified time limit is reached, invulnerability will be deactivated:
+
+```swift
+health_component.enable_invulnerability(true, 2.5)
+
+# You can deactivating it manually with
+health_component.enable_invulnerability(false)
+```
+
+**When health reachs zero**
+
+This component solely emits a "died" signal, offering you the flexibility to tailor the behavior to your game's needs. By establishing a connection to this signal, you can trigger animations, function calls, collect statistics, and perform other relevant actions to customize the experience according to your game's requirements..
+
+**Death manual check**
+
+Perform a manual check to ascertain if the entity has entered the death state. If you wish to manually determine this state, you can utilize the `check_is_death` function. This function emits the died signal if the current health reaches zero.
+
+```swift
+var is_dead: bool = health_component.check_is_death()
+```
+
+**Percentage of actual health**
+
+If you intend to exhibit a health bar UI, you can access the health percentage format through the `get_health_percent()` function. This function returns a dictionary structured as follows:
+
+```swift
+# For instance, if 80% of the maximum health represents the current health:
+
+{
+   "current_health_percentage": 0.8,
+   "overflow_health_percentage": 0.0,
+   "overflow_health": 0
+}
+
+# Similarly, considering a maximum health of 100, a health overflow percentage of 20.0, and a current health of 120:
+
+{ "current_health_percentage": 1.0,
+   "overflow_health_percentage": 0.2,
+   "overflow_health": 20
+}
+```
+
+This information can aid in accurately representing the health status and overflow in a visual health bar.
+
+**Signals:**
+
+```swift
+###
+# You can access the action type in the health_changed signal
+# to determine what kind of action was taken and act accordingly to the flow of your game.
+###
+
+enum TYPES {
+	DAMAGE,
+	HEALTH,
+	REGEN
+}
+
+signal health_changed(amount: int, type: TYPES)
+signal invulnerability_changed(active: bool)
+signal died
+```
+
+## Stats ⚔️
+
+This plugin provides a set of Resources to speed up the stats creation for your game entities. If you need more properties the way would be extending these resources and adding your properties
+
+### Character meta
+
+```swift
+class_name RpgCharacterMetaStats extends Resource
+
+enum ClassRange {
+	C,
+	B,
+	A,
+	S,
+	S_Plus
+}
+
+enum ClassType {
+	Fire,
+	Water,
+	Ice,
+	Earth,
+	Wind,
+	Electric,
+	Physical,
+	Neutral,
+	Machine,
+	Shadow,
+	Light
+}
+
+@export var level: int = 1
+@export var class_range: ClassRange = ClassRange.C
+@export var class_types: Array[ClassType] = [ClassType.Neutral]
+
+@export var hp: int = 100:
+	set(value):
+		hp = clampi(value, 0, max_hp)
+@export var max_hp: int = 100
+@export var pm: int = 50:
+	set(value):
+		pm = clampi(value, 0, max_pm)
+@export var max_pm: int = 50
+@export var raw_physical_attack: int = 50
+@export var raw_physical_defense: int = 50
+@export var raw_magical_attack: int = 50
+@export var raw_magical_defense: int = 50
+@export var speed: float = 100.0
+@export_category("Classic Stats")
+@export var strength: int = 10
+@export var constitution: int = 10
+@export var dexterity: int = 10
+@export var intelligence: int = 10
+@export var wisdom: int = 10
+@export var agility: int = 10
+@export var evasion: int = 10
+@export var accuracy: int = 10
+@export var endurance: int = 10
+@export var resistance: int = 10
+@export var charisma: int = 10
+@export var luck: int = 10
+@export_category("Chances")
+@export_range(0, 100.0, 0.01) var block_chance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var min_block_multiplier_reduction: float = 0.3
+@export_range(0.0, 100.0, 0.01) var max_block_multiplier_reduction: float = 0.5
+@export_range(0.0, 100.0, 0.01) var critical_chance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var min_critical_damage_multiplier: float = 1.5
+@export_range(0.0, 100.0, 0.01) var max_critical_damage_multiplier: float = 2.0
+@export var resistances: ElementalResistances
+@export var negative_status_effects_resistances: NegativeStatusEffectsResistances
+
+
+func is_c_range() -> bool:
+	return class_range == ClassRange.C
+
+func is_b_range() -> bool:
+	return class_range == ClassRange.B
+
+func is_a_range() -> bool:
+	return class_range == ClassRange.A
+
+func is_s_range() -> bool:
+	return class_range == ClassRange.S
+
+func is_s_plus_range() -> bool:
+	return class_range == ClassRange.S_Plus
+
+
+func is_fire() -> bool:
+	return ClassType.Fire in class_types
+
+func is_water() -> bool:
+	return ClassType.Water in class_types
+
+func is_ice() -> bool:
+	return ClassType.Ice in class_types
+
+func is_earth() -> bool:
+	return ClassType.Earth in class_types
+
+func is_wind() -> bool:
+	return ClassType.Wind in class_types
+
+func is_electric() -> bool:
+	return ClassType.Electric in class_types
+
+func is_physical() -> bool:
+	return ClassType.Physical in class_types
+
+func is_neutral() -> bool:
+	return ClassType.Neutral in class_types
+
+func is_machine() -> bool:
+	return ClassType.Machine in class_types
+
+func is_shadow() -> bool:
+	return ClassType.Shadow in class_types
+
+func is_light() -> bool:
+	return ClassType.Light in class_types
+```
+
+#### Elemental resistances
+
+```swift
+class_name ElementalResistances extends Resource
+
+@export_range(0.0, 100.0, 0.01) var fire_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var water_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var ice_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var wind_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var earth_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var plant_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var electric_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var machine_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var shadow_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var light_resistance: float = 0.1
+```
+
+#### Negative status effects
+
+```swift
+class_name NegativeStatusEffectsResistances extends Resource
+
+@export_range(0.0, 100.0, 0.01) var poison_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var sleep_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var silence_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var blind_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var confuse_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var curse_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var burn_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var wet_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var freeze_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var disease_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var petrify_resistance: float = 0.1
+@export_range(0.0, 100.0, 0.01) var paralysis_resistance: float = 0.1
+
+```
+
+# Turns 🧠
+
+This plugin allows you to configure a turn based system by adding `TurnitySocket` nodes.
+
+When you attach this node in your scene and link an actor to it, i.e. the node it belongs to _(player, enemy, etc.)_ understands that it must be added to the turn queue when it's initialized.
+
+## Available nodes
+
+- 🧠 **IndieBlueprintTurnityManager:** This singleton create or end turn sessions as well connect to signals, access sockets and so on.
+- 🔌 **IndieBlueprintTurnitySocket:** This socket can be linked to a node in the scene representing the actor which can be accessed when the turn _(the socket)_ becomes active.
+
+## Creating a new turn session
+
+This plugin calls `session` at the start of a turn system. When this happens it starts the mechanism whereby sockets are activated or deactivated depending on how they are configured.
+
+### Serial (classic turn mode)
+
+This is the definition of the function that start sessions. When this function it's called the first socket in the list its `start()` method will be called automatically.
+
+```swift
+func start_new_serial_turn_session(ordered_sockets: Array[TurnitySocket], turn_duration: float = 0, max_turns: int = 0) -> Error:
+```
+
+```swift
+var ordered_sockets: Array[TurnitySocket] = [turnity_socket, turnity_socket2, turnity_socket3, turnity_socket4]
+
+IndieBlueprintTurnityManager.start_new_serial_turn_session(ordered_sockets)
+
+// Setting each turn duration and maximum number of turns
+// Here we can start a session with 15 seconds per turn and 10 maximum turns
+IndieBlueprintTurnityManager.start_new_serial_turn_session(ordered_sockets, 15, 10)
+```
+
+## Handling turns
+
+To manually control the flow of the turn session you can access to the current socket via the `IndieBlueprintTurnityManager`
+
+**A turn session needs to be active to have access to the current socket**
+
+```swift
+// Access the current socket
+var current_socket: IndieBlueprintTurnitySocket = IndieBlueprintTurnityManager.current_turnity_socket
+```
+
+**_When you start a turn session with a time limit per turn, this flow is done automatically. You can still skip or block sockets in this mode._**
+
+### Skip
+
+Suddenly ends the turn and sends signals to know if the turn is over and skipped.
+
+### Block
+
+The socket is blocked the amount defined in the `block(turns_amount: int)` function, when the socket is blocked, in its turn it will be automatically skipped and the signals related to the blockage will be emitted.
+
+You can unlock it manually with `unblock()`
+
+### Socket methods
+
+Once you got the socket, you have available the methods that allow you to start, end, skipe and other actions per turn
+
+```swift
+func start() -> void
+
+func end() -> void
+
+func skip() -> void
+
+func block(turns_amount: int) -> void
+
+func unblock() -> void:
+
+func change_turn_duration(new_duration: float) -> IndieBlueprintTurnitySocket
+
+func reset_turn_timer()
+
+func stop_turn_timer()
+```
+
+## Turnity manager Signals
+
+```swift
+created_sequencial_turn_session(ordered_sockets: Array[IndieBlueprintTurnitySocket])
+started_turn_session
+
+ended_turn_session(total_turns: Array[IndieBlueprintTurnitySocket])
+
+maximum_turns_reached(total_turns: Array[IndieBlueprintTurnitySocket])
+
+started_turn(socket: IndieBlueprintTurnitySocket)
+
+ended_turn(socket: IndieBlueprintTurnitySocket)
+
+blocked_turn(socket: IndieBlueprintTurnitySocket, turns_blocked: int)
+
+skipped_turn(socket: IndieBlueprintTurnitySocket)
+
+changed_turn(from: IndieBlueprintTurnitySocket, to: IndieBlueprintTurnitySocket)
+
+second_passed(socket: IndieBlueprintTurnitySocket, remaining_seconds: int)
+```
+
+## Turnity socket Signals
+
+```swift
+started_turn
+
+ended_turn
+
+skipped
+
+blocked(turns_blocked: int)
+
+unblocked
+
+second_passed(remaining_seconds: int)
+```
