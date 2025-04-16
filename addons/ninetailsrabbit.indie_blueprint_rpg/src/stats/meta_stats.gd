@@ -63,6 +63,19 @@ enum ClassType {
 @export var negative_status_effects_resistances: NegativeStatusEffectsResistances
 
 
+## D&D bonus application
+## stat_value: The value of the statistic.
+## threshold: The minimum value of the statistic from which the bonus is applied.
+## increment: How many points above the threshold each +1 bonus is applied for.
+## EXAMPLE: calculate_stat_bonus(16, 10, 2) --> +3
+func calculate_stat_bonus(stat_value: int, threshold: int, increment: int) -> int:
+	if stat_value <= threshold:
+		return 0
+	else:
+		@warning_ignore("integer_division")
+		return (stat_value - threshold) / increment
+
+
 #region Range shortcuts
 func is_c_range() -> bool:
 	return class_range == ClassRange.C
