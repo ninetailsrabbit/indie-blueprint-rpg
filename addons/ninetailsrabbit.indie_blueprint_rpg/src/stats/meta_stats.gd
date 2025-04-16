@@ -68,12 +68,10 @@ enum ClassType {
 ## threshold: The minimum value of the statistic from which the bonus is applied.
 ## increment: How many points above the threshold each +1 bonus is applied for.
 ## EXAMPLE: calculate_stat_bonus(16, 10, 2) --> +3
+## EXAMPLE: calculate_stat_bonus(8, 10, 2) --> -1
 func calculate_stat_bonus(stat_value: int, threshold: int, increment: int) -> int:
-	if stat_value <= threshold:
-		return 0
-	else:
-		@warning_ignore("integer_division")
-		return (stat_value - threshold) / increment
+	@warning_ignore("integer_division")
+	return ((stat_value - threshold) / increment) * -1.0 if stat_value <= threshold else 1.0
 
 
 #region Range shortcuts
