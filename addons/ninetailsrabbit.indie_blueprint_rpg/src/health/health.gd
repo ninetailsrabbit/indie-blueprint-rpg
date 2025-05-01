@@ -16,7 +16,14 @@ signal died
 
 @export_group("Additional Behaviors")
 ## The amount of health regenerated each second
-@export var health_regen: int = 0
+@export var health_regen: int = 0:
+	set(value):
+		if value != health_regen:
+			health_regen = value
+			
+			if health_regen > 0:
+				enable_health_regen(health_regen)
+				
 ## Every tick it applies the health regen amount value
 @export var health_regen_tick_time : float = 1.0
 ## The invulnerability flag, when is true no damage is received but can be healed
@@ -119,7 +126,9 @@ func enable_health_regen(amount: int = health_regen, time: float = health_regen_
 			
 			if not health_regen_timer.time_left > 0 or health_regen_timer.is_stopped():
 				health_regen_timer.start()
-
+		else:
+			health_regen_timer.stop()
+			
 
 func _create_health_regen_timer(time: float = health_regen_tick_time):
 	if health_regen_timer:
