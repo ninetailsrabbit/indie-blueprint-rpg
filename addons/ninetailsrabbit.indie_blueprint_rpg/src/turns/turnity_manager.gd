@@ -12,7 +12,8 @@ signal changed_turn(from: IndieBlueprintTurnitySocket, to: IndieBlueprintTurnity
 signal second_passed(socket: IndieBlueprintTurnitySocket, remaining_seconds: int)
 
 enum Modes {
-	Serial ## The turns are assigned in series with a defined formation
+	Serial, ## The turns are assigned in series with a defined formation
+	ActionPoints ## The turns have a limited action points that can be consumed or skipped
 }
 
 var current_turnity_sockets: Array[IndieBlueprintTurnitySocket] = []
@@ -53,6 +54,31 @@ func start_new_serial_turn_session(ordered_sockets: Array[IndieBlueprintTurnityS
 		
 	return OK
 
+
+func start_new_action_points_turn_session(ordered_sockets: Array[IndieBlueprintTurnitySocket], max_action_points: int) -> Error:
+	if ordered_sockets.is_empty():
+		push_error("IndieBlueprintTurnityManager: A new action points turn session cannot be created from an empty array of turnity sockets")
+		
+		return ERR_PARAMETER_RANGE_ERROR
+		
+	if ordered_sockets.size() == 1:
+		push_error("IndieBlueprintTurnityManager: A new action points turn session cannot be created from an individual turnity socket")
+		
+		return ERR_PARAMETER_RANGE_ERROR
+	
+	for socket: IndieBlueprintTurnitySocket in current_turnity_sockets:
+		socket.max_action_points = max_action_points
+		socket.current_action_points = socket.default_action_points
+		
+	connect_sockets(current_turnity_sockets)
+	
+	current_turnity_socket = initial_turnity_socket()
+	current_turnity_socket.start()
+	
+	started_turn_session.emit()
+	
+	return OK
+	
 
 func end_current_turn_session() -> void:
 	disconnect_sockets(current_turnity_sockets)

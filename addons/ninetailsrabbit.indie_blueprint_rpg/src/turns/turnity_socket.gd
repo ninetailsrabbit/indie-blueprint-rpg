@@ -5,6 +5,8 @@ signal ended_turn
 signal skipped
 signal blocked(turns_blocked: int)
 signal unblocked
+signal increased_action_points(points: int)
+signal consumed_action_points(points: int)
 signal second_passed(remaining_seconds: int)
 
 const GroupName: StringName = &"turnity-socket"
@@ -22,16 +24,22 @@ const GroupName: StringName = &"turnity-socket"
 			change_turn_duration(turn_duration)
 			
 ## The maximum turns this socket can be blocked, when a socket it's blocked the turn it's skipped automatically
-@export var max_turns_can_be_blocked: int = 3
+@export var max_blocked_turns: int = 3
 ## The turn enters normally but when it is blocked the turns_blocked is reduced by one and the turn is automatically skipped
 @export var skip_auto_when_blocked: bool = true
+@export var default_action_points: int = 4:
+	set(value):
+		default_action_points = clampi(value, 0, max_action_points)
+@export var max_action_points: int = 8
+@export var end_auto_when_action_points_consumed: bool = true
+
 
 var turn_timer: Timer
 var turns_blocked: int = 0:
 	set(value):
 		var previous_value: int = turns_blocked
 		
-		turns_blocked = clampi(value, 0, max_turns_can_be_blocked)
+		turns_blocked = clampi(value, 0, max_blocked_turns)
 		
 		if previous_value != turns_blocked and turns_blocked == 0:
 			unblock()
@@ -68,6 +76,18 @@ var current_seconds_passed: int = 0:
 					end()
 				else:
 					second_passed.emit(turn_duration - current_seconds_passed)
+
+var current_action_points: int = 0:
+	set(value):
+		if value != current_action_points:
+			var previous: int = current_action_points
+			current_action_points = clampi(current_action_points, 0, max_action_points)
+			
+			if current_action_points < previous:
+				consumed_action_points.emit(previous - current_action_points)
+			elif current_action_points > previous:
+				increased_action_points.emit(current_action_points - previous)
+
 
 func _enter_tree() -> void:
 	add_to_group(GroupName)
@@ -115,6 +135,21 @@ func block(turns_amount: int) -> void:
 func unblock() -> void:
 	is_blocked = false
 	turns_blocked = 0
+	
+
+func set_action_points(points: int) -> void:
+	current_action_points = points
+
+
+func increase_action_points(points: int) -> void:
+	current_action_points += points
+
+
+func consume_action_points(points: int) -> void:
+	current_action_points -= points
+	
+	if current_action_points == 0 and end_auto_when_action_points_consumed:
+		end()
 	
 	
 func change_turn_duration(new_duration: float) -> IndieBlueprintTurnitySocket:
