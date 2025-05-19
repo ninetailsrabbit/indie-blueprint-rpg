@@ -87,7 +87,10 @@ var current_action_points: int = 0:
 				consumed_action_points.emit(previous - current_action_points)
 			elif current_action_points > previous:
 				increased_action_points.emit(current_action_points - previous)
-
+			
+			if current_action_points == 0 and end_auto_when_action_points_consumed:
+				end()
+	
 
 func _enter_tree() -> void:
 	add_to_group(GroupName)
@@ -111,6 +114,8 @@ func start() -> void:
 	if is_blocked and turns_blocked > 0:
 		turns_blocked -= 1
 		skip()
+		
+	current_action_points = default_action_points
 
 
 func end() -> void:
@@ -148,10 +153,7 @@ func increase_action_points(points: int) -> void:
 func consume_action_points(points: int) -> void:
 	current_action_points -= points
 	
-	if current_action_points == 0 and end_auto_when_action_points_consumed:
-		end()
-	
-	
+
 func change_turn_duration(new_duration: float) -> IndieBlueprintTurnitySocket:
 	if is_instance_valid(turn_timer) and turn_timer.is_inside_tree():
 		turn_timer.stop()
