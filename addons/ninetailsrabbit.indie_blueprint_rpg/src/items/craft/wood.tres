@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CraftableItem" load_steps=2 format=3 uid="uid://4qa3ig36cv5b"]
+
+[ext_resource type="Script" uid="uid://wxent3bm2p2j" path="res://addons/ninetailsrabbit.indie_blueprint_rpg/src/items/craft/craftable_item.gd" id="1_xfd87"]
+
+[resource]
+script = ExtResource("1_xfd87")
+id = &"wood"
+display_name = "Wood"
+description = ""
+material_type = 3
+stackable = true
+max_amount = 10
+metadata/_custom_type_script = "uid://wxent3bm2p2j"
