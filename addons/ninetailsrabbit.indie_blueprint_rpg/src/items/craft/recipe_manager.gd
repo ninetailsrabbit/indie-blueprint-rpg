@@ -6,16 +6,11 @@ extends Node
 ## improving the performance. This is because we have a linear search on the recipes array O(n)
 var recipes_index: Dictionary[String, CraftableItemRecipe]
 
-
-func _ready() -> void:
-	_sort_recipes_by_desc_priority()
-	
 	
 func add_recipes(recipes: Array[CraftableItemRecipe]) -> void:
 	for recipe: CraftableItemRecipe in recipes:
 		add_recipe(recipe)
 	
-	_sort_recipes_by_desc_priority()
 
 
 func add_recipe(new_recipe: CraftableItemRecipe) -> void:
@@ -27,7 +22,6 @@ func remove_recipes(recipes: Array[CraftableItemRecipe]) -> void:
 	for recipe: CraftableItemRecipe in recipes:
 		remove_recipe(recipe)
 	
-	_sort_recipes_by_desc_priority()
 	
 	
 func remove_recipe(recipe: CraftableItemRecipe) -> void:
@@ -44,6 +38,9 @@ func find_recipe_from_selection(items: Dictionary[CraftableItem, int]) -> Crafta
 	if recipes_index.has(index):
 		return recipes_index[index]
 		
+	var current_recipes: Array[CraftableItemRecipe] = recipes.duplicate()
+	_sort_recipes_by_desc_priority(current_recipes)
+	
 	var found_recipe: CraftableItemRecipe
 	
 	for recipe: CraftableItemRecipe in recipes:
@@ -65,6 +62,6 @@ func lookup_index_from_selection(selected_items: Dictionary[StringName, int]) ->
 	return  "_".join(selected_items_sorted_ids)
 
 
-func _sort_recipes_by_desc_priority() -> void:
-	recipes.sort_custom(
+func _sort_recipes_by_desc_priority(selected_recipes: Array[CraftableItemRecipe]) -> void:
+	selected_recipes.sort_custom(
 		func(recipe_a: CraftableItemRecipe, recipe_b: CraftableItemRecipe): recipe_a.priority > recipe_b.priority)
