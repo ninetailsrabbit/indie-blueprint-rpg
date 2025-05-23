@@ -1,9 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://bb62tgy6dxu4w"]
+[gd_scene load_steps=2 format=3 uid="uid://bb62tgy6dxu4w"]
 
 [ext_resource type="Script" uid="uid://bsa1c8orwb601" path="res://addons/ninetailsrabbit.indie_blueprint_rpg/src/items/craft/recipe_manager.gd" id="1_tqgfo"]
-[ext_resource type="Script" uid="uid://b6vca0nvxuffw" path="res://addons/ninetailsrabbit.indie_blueprint_rpg/src/items/craft/recipe.gd" id="2_i2k6v"]
-[ext_resource type="Resource" uid="uid://pr3ngh4hcmbc" path="res://addons/ninetailsrabbit.indie_blueprint_rpg/src/items/craft/palo_recipe.tres" id="3_lf5pb"]
 
 [node name="RecipeManager" type="Node"]
 script = ExtResource("1_tqgfo")
-recipes = Array[ExtResource("2_i2k6v")]([ExtResource("3_lf5pb")])
